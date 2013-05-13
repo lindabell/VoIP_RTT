@@ -40,8 +40,8 @@ void *dec_state;/* Holds the states of the encoder & the decoder */	 //ø’÷∏’Î
 static SpeexBits DecoderBits;
 ////////////////////////////////////////////////////////
 
-#define filename "D:\\1~10s.wav"
-#define filename2 "D:\\1~10scopy.wav"
+#define filename "../Soure/1~10s.wav"
+#define filename2 "../Soure/new.wav"
 
 void main(void)
 {
@@ -117,7 +117,7 @@ void main(void)
 	}
 	/////////////////////////////////////////////////////////////
 
-	fd2=open(filename2,O_WRONLY|O_CREAT|O_BINARY);
+	fd2=open(filename2,O_WRONLY|O_CREAT|O_BINARY|O_TRUNC);
 	if(!fd)
 	{
 		printf("open write file fail\n");
