@@ -214,10 +214,8 @@ void EXTI9_5_IRQHandler(void)
 
     if(EXTI_GetITStatus(EXTI_Line6) == SET)
     {
-        extern void ra8875_nwait_isr(void);
-
         EXTI_ClearITPendingBit(EXTI_Line6);
-        ra8875_nwait_isr();
+        key_flag = 1;
     }
 
     if(EXTI_GetITStatus(EXTI_Line7) == SET)
