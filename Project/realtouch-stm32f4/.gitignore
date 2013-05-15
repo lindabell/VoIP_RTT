@@ -1,0 +1,16 @@
+*~
+*.bak
+*.swp
+*.o
+*.pyc
+*.map
+*.bin
+*.axf
+*.ini
+*.log
+*.bat
+*.gdbinit
+.sconsign.dblite
+JLinkLog.txt
+jlink_flash.txt
+build/
