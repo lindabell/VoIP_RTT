@@ -479,6 +479,7 @@
                 <Header RelativePath="applications\JSON_parser.h" />
                 <Header RelativePath="d:\Keil\ARM\RV31\INC\stddef.h" />
             </File>
+            <File RelativePath=".\applications\tftp.c" FileType="1" Output="tftp.o" ro="0" bss="0" rw="0" />
         </Filter>
         <Filter Name="Drivers">
             <File RelativePath="drivers\touch.c" FileType="1" Output="touch.o" ro="0" bss="0" rw="0">

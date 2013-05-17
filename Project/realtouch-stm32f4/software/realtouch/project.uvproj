@@ -450,6 +450,11 @@
               <FileType>1</FileType>
               <FilePath>applications\wav.c</FilePath>
             </File>
+            <File>
+              <FileName>tftp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\applications\tftp.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
