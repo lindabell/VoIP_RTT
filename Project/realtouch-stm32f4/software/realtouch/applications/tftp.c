@@ -20,7 +20,7 @@ void tftp_get(const char* host, const char* dir, const char* filename)
 	struct sockaddr_in tftp_addr, from_addr;
 	rt_uint32_t length;
 	socklen_t fromlen;
-
+	rt_uint32_t total_length=0;
 	/* make local file name */
 	rt_snprintf((char*)tftp_buffer, sizeof(tftp_buffer),
 		"%s/%s", dir, filename);
@@ -72,7 +72,8 @@ void tftp_get(const char* host, const char* dir, const char* filename)
 		if (length > 0)
 		{
 			write(fd, (char*)&tftp_buffer[4], length - 4);
-			rt_kprintf("#");
+			total_length+=(length-4);
+			rt_kprintf("Receive:%d\tBytes\r",total_length);//rt_kprintf("#");
 
 			/* make ACK */			
 			tftp_buffer[0] = 0; tftp_buffer[1] = TFTP_ACK; /* opcode */
@@ -97,7 +98,7 @@ void tftp_put(const char* host, const char* dir, const char* filename)
 	struct sockaddr_in tftp_addr, from_addr;
 	rt_uint32_t length, block_number = 0;
 	socklen_t fromlen;
-
+	rt_uint32_t total_length=0;
 	/* make local file name */
 	rt_snprintf((char*)tftp_buffer, sizeof(tftp_buffer),
 		"%s/%s", dir, filename);
@@ -165,7 +166,7 @@ void tftp_put(const char* host, const char* dir, const char* filename)
 			tftp_buffer[0] = 0; tftp_buffer[1] = TFTP_DATA;
 			tftp_buffer[2] = (block_number >> 8) & 0xff;
 			tftp_buffer[3] = block_number & 0xff;
-
+			total_length+=length;
 			lwip_sendto(sock_fd, tftp_buffer, length + 4, 0, 
 				(struct sockaddr *)&from_addr, fromlen);
 		}
@@ -185,8 +186,8 @@ void tftp_put(const char* host, const char* dir, const char* filename)
 				tftp_buffer[2] == (block_number >> 8) & 0xff) &&
 				tftp_buffer[3] == (block_number & 0xff))
 			{
-				block_number ++;
-				rt_kprintf("#");
+				block_number ++;				
+				rt_kprintf("Send:%d\tBytes\r",total_length);//rt_kprintf("#");
 			}
 			else 
 			{
