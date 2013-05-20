@@ -16,19 +16,12 @@
 #define PLL_K_122880            (416349)
 
 ///* CODEC port define */
+//#define CODEC_I2S_PORT          SPI3
 //#define CODEC_I2S_IRQ           SPI3_IRQn
 //#define CODEC_I2S_DMA           DMA2_Channel2
 //#define CODEC_I2S_DMA_IRQ       DMA2_Channel2_IRQn
 //#define CODEC_I2S_RCC_APB1      RCC_APB1Periph_SPI3
 //#define CODEC_I2S_RCC_AHB       RCC_AHBPeriph_DMA2
-
-/* AUDIO TX definitions */
-#define AUDIO_I2S_TX_PORT           SPI3
-#define AUDIO_I2S_TX_DMA_CLOCK      RCC_AHB1Periph_DMA1
-#define AUDIO_I2S_TX_DMA_STREAM     DMA1_Stream7
-#define AUDIO_I2S_TX_DMA_CHANNEL    DMA_Channel_0
-#define AUDIO_I2S_TX_DMA_IRQ        DMA1_Stream7_IRQn
-#define AUDIO_I2S_TX_DMA_IT_TC      DMA_IT_TCIF7
 
 #define AUDIO_I2S_RX_PORT           I2S3ext
 #define AUDIO_I2S_RX_DMA_STREAM     DMA1_Stream0
@@ -36,41 +29,22 @@
 #define AUDIO_I2S_RX_DMA_IRQ        DMA1_Stream0_IRQn
 #define AUDIO_I2S_RX_DMA_IT_TC      DMA_IT_TCIF0
 
+/* I2S DMA Stream definitions */
+#define AUDIO_I2S_TX_PORT           SPI3
+#define AUDIO_I2S_TX_DMA_CLOCK      RCC_AHB1Periph_DMA1
+#define AUDIO_I2S_TX_DMA_STREAM     DMA1_Stream7
+#define AUDIO_I2S_TX_DMA_CHANNEL    DMA_Channel_0
+#define AUDIO_I2S_TX_DMA_IRQ        DMA1_Stream7_IRQn
+#define AUDIO_I2S_TX_DMA_IT_TC      DMA_IT_TCIF7
+
+
+
 void vol(uint16_t v);
 static void codec_send(rt_uint16_t s_data);
 
-#define DATA_NODE_MAX 5
-/* data node for Tx Mode */
-struct codec_data_node
-{
-    rt_uint16_t *data_ptr;
-    rt_size_t  data_size;
-};
 
-#define RX_BUFF_SIZE        (2048)
-#define RX_BUFF_NUM    (8)
-struct codec_rx_data_node
-{
-    rt_uint16_t buffer[RX_BUFF_SIZE/sizeof(rt_uint16_t)];
-    rt_size_t  data_size;
-};
 
-struct codec_device
-{
-    /* inherit from rt_device */
-    struct rt_device parent;
 
-    /* pcm data list */
-    struct codec_data_node data_list[DATA_NODE_MAX];
-    rt_uint16_t read_index, put_index;
-
-    /* pcm rx_data list */
-    struct codec_rx_data_node rx_data_list[RX_BUFF_NUM];
-    rt_uint16_t rx_rec_index, rx_read_index;
-
-    /* i2c mode */
-    struct rt_i2c_bus_device * i2c_device;
-};
 struct codec_device codec;
 
 static uint16_t r06 = REG_CLOCK_GEN | CLKSEL_PLL | MCLK_DIV2 | BCLK_DIV8;
@@ -263,8 +237,7 @@ static rt_err_t codec_init(rt_device_t dev)
     codec_send(REG_PLL_K2 | ((PLL_K_112896>>9) & 0x1FF));
     codec_send(REG_PLL_K3 | ((PLL_K_112896>>0) & 0x1FF));
 
-    codec_send(REG_POWER_MANAGEMENT1
-               | BUFDCOPEN | BUFIOEN | VMIDSEL_75K | MICBEN | BIASEN | PLLEN);
+    codec_send(REG_POWER_MANAGEMENT1 | BUFDCOPEN | BUFIOEN | VMIDSEL_75K | MICBEN | BIASEN | PLLEN);
 //    codec_send(REG_POWER_MANAGEMENT1 | BUFDCOPEN | BUFIOEN | VMIDSEL_75K | BIASEN | PLLEN);
     codec_send(r06);
 
@@ -482,13 +455,26 @@ FINSH_FUNCTION_EXPORT(eq3d, Set 3D(Depth));
 FINSH_FUNCTION_EXPORT(sample_rate, Set sample rate);
 #endif
 
+#include "dfs_posix.h"
+static struct rt_semaphore sem;
 static rt_err_t codec_open(rt_device_t dev, rt_uint16_t oflag)
 {
+	if(oflag==O_WRONLY)
+	{
+		
+	
 #if !CODEC_MASTER_MODE
     /* enable I2S */
     I2S_Cmd(AUDIO_I2S_TX_PORT, ENABLE);
 #endif
-//    I2S_Cmd(AUDIO_I2S_RX_PORT, ENABLE);
+	}
+	else if(oflag==O_RDONLY)
+	{
+		rt_kprintf("O_RDONLY\n");
+		rt_sem_init(&sem, "sem", 0, RT_IPC_FLAG_FIFO);
+		I2S_Cmd(AUDIO_I2S_RX_PORT, ENABLE);	
+	}
+    else return RT_ERROR;
 
     return RT_EOK;
 }
@@ -530,6 +516,8 @@ static rt_err_t codec_close(rt_device_t dev)
     }
 #endif
 
+	NVIC_DisableIRQ(AUDIO_I2S_RX_DMA_IRQ);
+
     return RT_EOK;
 }
 
@@ -565,8 +553,40 @@ static rt_err_t codec_control(rt_device_t dev, rt_uint8_t cmd, void *args)
     return result;
 }
 
-static rt_size_t codec_write(rt_device_t dev, rt_off_t pos,
-                             const void* buffer, rt_size_t size)
+static rt_size_t codec_read(rt_device_t dev, rt_off_t pos, void *buffer, rt_size_t size)
+{
+	struct codec_device* device;
+
+	device = (struct codec_device*) dev;
+	RT_ASSERT(device != RT_NULL);
+	if(device->rx_read_index==device->rx_rec_index)
+	{
+		r06 |= MS;
+		codec_send(r06);
+	}
+
+	DMA_RX_Configuration((rt_uint32_t)&device->rx_data_list[device->rx_rec_index].buffer[0],
+						 RX_BUFF_SIZE/sizeof(rt_uint16_t));
+	device->rx_rec_index++;
+	NVIC_EnableIRQ(AUDIO_I2S_RX_DMA_IRQ);
+
+	rt_sem_take(&sem, RT_WAITING_FOREVER);
+
+	if(device->rx_read_index != device->rx_rec_index)
+	{
+		rt_memcpy(buffer,device->rx_data_list[device->rx_read_index].buffer,RX_BUFF_SIZE);		
+		device->rx_read_index++;
+		if (device->rx_read_index == RX_BUFF_NUM)
+		{
+			device->rx_read_index = 0;
+		}
+		
+		return RX_BUFF_SIZE;
+	}
+	return 0;
+}
+
+static rt_size_t codec_write(rt_device_t dev, rt_off_t pos,const void* buffer, rt_size_t size)
 {
     struct codec_device* device;
     struct codec_data_node* node;
@@ -697,10 +717,11 @@ static rt_err_t wav_header_gen(int fd, rt_size_t size)
 }
 
 /* 信号量控制块 */
-static struct rt_semaphore sem;
+//static struct rt_semaphore sem;
 //rt_err_t rec_test(const char * i2c_bus_device_name)
 static const char * i2c_bus_device_name = "i2c1";
-rt_err_t rec_test(void)
+
+rt_err_t codec_hw_init(const char * i2c_bus_device_name)
 {
     struct rt_i2c_bus_device * i2c_device;
 
@@ -736,7 +757,7 @@ rt_err_t rec_test(void)
     codec.parent.init    = codec_init;
     codec.parent.open    = codec_open;
     codec.parent.close   = codec_close;
-    codec.parent.read    = RT_NULL;
+    codec.parent.read    = codec_read;
     codec.parent.write   = codec_write;
 
     /* set read_index and put index to 0 */
@@ -746,109 +767,87 @@ rt_err_t rec_test(void)
     codec.rx_rec_index = 0;
     codec.rx_read_index = 0;
 
-#define RX_BUFFER_WORD_SIZE      512
-    /* rec test */
-    {
-        uint16_t * tx_data_buffer;
-        uint16_t * rx_data_buffer;
-        uint16_t * tmp;
-        uint32_t i;
+// #define RX_BUFFER_WORD_SIZE      512
+//     /* rec test */
+//     {
+//         uint16_t * tx_data_buffer;
+//         uint16_t * rx_data_buffer;
+//         uint16_t * tmp;
+//         uint32_t i;
 
-//        rx_data_buffer = rt_malloc(RX_BUFFER_WORD_SIZE*2);
-//        if(rx_data_buffer == RT_NULL)
-//        {
-//            return;
-//        }
+//         codec_init(&codec.parent);
 
-        codec_init(&codec.parent);
+//         I2S_Cmd(AUDIO_I2S_RX_PORT, ENABLE);
 
-//        NVIC_EnableIRQ(AUDIO_I2S_TX_DMA_IRQ);
-//        DMA_TX_Configuration((rt_uint32_t) node->data_ptr, node->data_size);
-//        I2S_Cmd(AUDIO_I2S_TX_PORT, ENABLE);
-        I2S_Cmd(AUDIO_I2S_RX_PORT, ENABLE);
+//         r06 |= MS;
+//         codec_send(r06);
 
-        r06 |= MS;
-        codec_send(r06);
+//         /* rec test */
+//         {
+//             rt_err_t result;
+//             uint32_t count = 0;
+//             int fd;
 
+//             /* 初始化信号量，初始值是0 */
+//             result = rt_sem_init(&sem, "sem", 0, RT_IPC_FLAG_FIFO);
 
-        /* rec test */
-        {
-            rt_err_t result;
-            uint32_t count = 0;
-            int fd;
+// #define TEST_FN		"/rec.wav"
 
-            /* 初始化信号量，初始值是0 */
-            result = rt_sem_init(&sem, "sem", 0, RT_IPC_FLAG_FIFO);
+//             /* create file. */
+//             fd = open(TEST_FN, O_WRONLY | O_CREAT | O_TRUNC, 0);
+//             if (fd < 0)
+//             {
+//                 rt_kprintf("open file for write failed\n");
+//                 return;
+//             }
 
-#define TEST_FN		"/rec.wav"
+//             rt_kprintf("REC start!\r\n");
+//             DMA_RX_Configuration((rt_uint32_t)&codec.rx_data_list[codec.rx_rec_index].buffer[0],
+//                                  RX_BUFF_SIZE/sizeof(rt_uint16_t));
+//             codec.rx_rec_index++;
+//             NVIC_EnableIRQ(AUDIO_I2S_RX_DMA_IRQ);
 
-            /* create file. */
-            fd = open(TEST_FN, O_WRONLY | O_CREAT | O_TRUNC, 0);
-            if (fd < 0)
-            {
-                rt_kprintf("open file for write failed\n");
-                return;
-            }
+//             while(1)
+//             {
+//                 result = rt_sem_take(&sem, RT_WAITING_FOREVER);
 
-            rt_kprintf("REC start!\r\n");
-            DMA_RX_Configuration((rt_uint32_t)&codec.rx_data_list[codec.rx_rec_index].buffer[0],
-                                 RX_BUFF_SIZE/sizeof(rt_uint16_t));
-            codec.rx_rec_index++;
-            NVIC_EnableIRQ(AUDIO_I2S_RX_DMA_IRQ);
+//                 while(codec.rx_read_index != codec.rx_rec_index)
+//                 {
+//                     /* write to file */
+//                     write(fd, codec.rx_data_list[codec.rx_read_index].buffer,
+//                           RX_BUFF_SIZE);
 
-            while(1)
-            {
-                result = rt_sem_take(&sem, RT_WAITING_FOREVER);
+//                     count++;
+//                     codec.rx_read_index++;
+//                     if(codec.rx_read_index == RX_BUFF_NUM)
+//                     {
+//                         codec.rx_read_index = 0;
+//                     }
+//                 }
 
-                while(codec.rx_read_index != codec.rx_rec_index)
-                {
-                    /* write to file */
-                    write(fd, codec.rx_data_list[codec.rx_read_index].buffer,
-                          RX_BUFF_SIZE);
+//                 if(count > 2000)
+//                 {
+//                     NVIC_DisableIRQ(AUDIO_I2S_RX_DMA_IRQ);
 
-                    count++;
-                    codec.rx_read_index++;
-                    if(codec.rx_read_index == RX_BUFF_NUM)
-                    {
-                        codec.rx_read_index = 0;
-                    }
-                }
+//                     /* add header */
+//                     wav_header_gen(fd, RX_BUFF_SIZE * count);
+//                     rt_kprintf("REC done, count: %u\r\n", count);
 
-                if(count > 2000)
-                {
-                    NVIC_DisableIRQ(AUDIO_I2S_RX_DMA_IRQ);
-
-                    /* add header */
-                    wav_header_gen(fd, RX_BUFF_SIZE * count);
-                    rt_kprintf("REC done, count: %u\r\n", count);
-
-                    close(fd);
-                    break;
-                }
-            }
-        } /* rec test */
-
-//        tmp = rx_data_buffer;
-//        for(i=0; i<RX_BUFFER_WORD_SIZE; i++)
-//        {
-////            while (SPI_I2S_GetFlagStatus(AUDIO_I2S_TX_PORT, SPI_FLAG_TXE) == RESET);
-////            SPI_I2S_SendData(AUDIO_I2S_TX_PORT, 0x00);
-//
-//            while (SPI_I2S_GetFlagStatus(AUDIO_I2S_RX_PORT, SPI_FLAG_RXNE) == RESET);
-//            *tmp++ = SPI_I2S_ReceiveData(AUDIO_I2S_RX_PORT);
-//        }
-//        NVIC_EnableIRQ(AUDIO_I2S_RX_DMA_IRQ);
-//        DMA_RX_Configuration((rt_uint32_t)rx_data_buffer, RX_BUFFER_WORD_SIZE);
-    }
+//                     close(fd);
+//                     break;
+//                 }
+//             }
+//         } /* rec test */
+//     }
 
     /* register the device */
-//    return rt_device_register(&codec.parent, "snd", RT_DEVICE_FLAG_WRONLY | RT_DEVICE_FLAG_DMA_TX);
+    return rt_device_register(&codec.parent, "snd", RT_DEVICE_FLAG_WRONLY | RT_DEVICE_FLAG_DMA_TX);
 }
 
-#ifdef RT_USING_FINSH
-#include <finsh.h>
-FINSH_FUNCTION_EXPORT(rec_test, rec test)
-#endif
+// #ifdef RT_USING_FINSH
+// #include <finsh.h>
+// FINSH_FUNCTION_EXPORT(rec_test, rec test)
+// #endif
 
 static void codec_dma_isr(void)
 {
@@ -920,6 +919,7 @@ static void codec_dma_isr(void)
     rt_interrupt_leave();
 }
 
+/*DMA接收录音数据*/
 void DMA1_Stream0_IRQHandler(void)
 {
     /* Test on DMA Stream Transfer Complete interrupt */
@@ -928,7 +928,7 @@ void DMA1_Stream0_IRQHandler(void)
         /* Clear DMA Stream Transfer Complete interrupt pending bit */
         DMA_ClearITPendingBit(AUDIO_I2S_RX_DMA_STREAM, AUDIO_I2S_RX_DMA_IT_TC);
 
-        /* do something */
+        /* set next buffer */
         DMA_RX_Configuration((rt_uint32_t)&codec.rx_data_list[codec.rx_rec_index].buffer[0],
                              RX_BUFF_SIZE/sizeof(rt_uint16_t));
         codec.rx_rec_index++;
@@ -937,18 +937,16 @@ void DMA1_Stream0_IRQHandler(void)
             codec.rx_rec_index = 0;
         }
         NVIC_EnableIRQ(AUDIO_I2S_RX_DMA_IRQ);
-        rt_sem_release(&sem);
+		
+        rt_sem_release(&sem);		
         if(codec.rx_rec_index == codec.rx_read_index)
-//        {
-//        }
-//        else
         {
             rt_kprintf("no rx buff!\r\n");
         }
-//        codec_dma_isr();
     }
 }
 
+/*DMA 发送音频数据到 wm8978*/
 void DMA1_Stream7_IRQHandler(void)
 {
     /* Test on DMA Stream Transfer Complete interrupt */
