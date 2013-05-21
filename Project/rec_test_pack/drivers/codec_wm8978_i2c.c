@@ -459,18 +459,16 @@ FINSH_FUNCTION_EXPORT(sample_rate, Set sample rate);
 static struct rt_semaphore sem;
 static rt_err_t codec_open(rt_device_t dev, rt_uint16_t oflag)
 {
-	if(oflag==O_WRONLY)
-	{
-		
-	
+	if(oflag==RT_DEVICE_OFLAG_WRONLY)
+	{			
 #if !CODEC_MASTER_MODE
     /* enable I2S */
     I2S_Cmd(AUDIO_I2S_TX_PORT, ENABLE);
 #endif
 	}
-	else if(oflag==O_RDONLY)
+	else if(oflag==RT_DEVICE_OFLAG_RDONLY)
 	{
-		rt_kprintf("O_RDONLY\n");
+		rt_kprintf("RT_DEVICE_OFLAG_RDONLY\n");
 		rt_sem_init(&sem, "sem", 0, RT_IPC_FLAG_FIFO);
 		I2S_Cmd(AUDIO_I2S_RX_PORT, ENABLE);	
 		
@@ -484,7 +482,11 @@ static rt_err_t codec_open(rt_device_t dev, rt_uint16_t oflag)
 	NVIC_EnableIRQ(AUDIO_I2S_RX_DMA_IRQ);
 	
 	}
-    else return RT_ERROR;
+    else
+	{
+		//current not support RT_DEVICE_OFLAG_RDWR 
+		RT_ASSERT(0);
+	}
 
     return RT_EOK;
 }
@@ -645,81 +647,81 @@ static rt_size_t codec_write(rt_device_t dev, rt_off_t pos,const void* buffer, r
 }
 
 /**********************************/
-#include <dfs_posix.h>
+// #include <dfs_posix.h>
 
-struct RIFF_HEADER_DEF
-{
-    char riff_id[4];     // 'R','I','F','F'
-    uint32_t riff_size;
-    char riff_format[4]; // 'W','A','V','E'
-};
+// struct RIFF_HEADER_DEF
+// {
+//     char riff_id[4];     // 'R','I','F','F'
+//     uint32_t riff_size;
+//     char riff_format[4]; // 'W','A','V','E'
+// };
 
-struct WAVE_FORMAT_DEF
-{
-    uint16_t FormatTag;
-    uint16_t Channels;
-    uint32_t SamplesPerSec;
-    uint32_t AvgBytesPerSec;
-    uint16_t BlockAlign;
-    uint16_t BitsPerSample;
-};
+// struct WAVE_FORMAT_DEF
+// {
+//     uint16_t FormatTag;
+//     uint16_t Channels;
+//     uint32_t SamplesPerSec;
+//     uint32_t AvgBytesPerSec;
+//     uint16_t BlockAlign;
+//     uint16_t BitsPerSample;
+// };
 
-struct FMT_BLOCK_DEF
-{
-    char fmt_id[4];    // 'f','m','t',' '
-    uint32_t fmt_size;
-    struct WAVE_FORMAT_DEF wav_format;
-};
+// struct FMT_BLOCK_DEF
+// {
+//     char fmt_id[4];    // 'f','m','t',' '
+//     uint32_t fmt_size;
+//     struct WAVE_FORMAT_DEF wav_format;
+// };
 
-ALIGN(4)
-static uint8_t header_buffer[100];
-static rt_err_t wav_header_gen(int fd, rt_size_t size)
-{
-    struct RIFF_HEADER_DEF * riff_header;
-    struct FMT_BLOCK_DEF *   fmt_block;
-    rt_size_t offset = 0;
+// ALIGN(4)
+// static uint8_t header_buffer[100];
+// static rt_err_t wav_header_gen(int fd, rt_size_t size)
+// {
+//     struct RIFF_HEADER_DEF * riff_header;
+//     struct FMT_BLOCK_DEF *   fmt_block;
+//     rt_size_t offset = 0;
 
-    memset(&header_buffer, 0, sizeof(header_buffer));
+//     memset(&header_buffer, 0, sizeof(header_buffer));
 
-    riff_header = (struct RIFF_HEADER_DEF *)&header_buffer[offset];
-    offset += sizeof(struct RIFF_HEADER_DEF);
+//     riff_header = (struct RIFF_HEADER_DEF *)&header_buffer[offset];
+//     offset += sizeof(struct RIFF_HEADER_DEF);
 
-    fmt_block = (struct FMT_BLOCK_DEF *)&header_buffer[offset];
-    offset += sizeof(struct FMT_BLOCK_DEF);
+//     fmt_block = (struct FMT_BLOCK_DEF *)&header_buffer[offset];
+//     offset += sizeof(struct FMT_BLOCK_DEF);
 
-    strncpy(riff_header->riff_id, "RIFF", 4);
-    riff_header->riff_size = size - 8;
-    strncpy(riff_header->riff_format, "WAVE", 4);
+//     strncpy(riff_header->riff_id, "RIFF", 4);
+//     riff_header->riff_size = size - 8;
+//     strncpy(riff_header->riff_format, "WAVE", 4);
 
-    strncpy(fmt_block->fmt_id, "fmt ", 4);
-    fmt_block->fmt_size = sizeof(struct WAVE_FORMAT_DEF);
-    fmt_block->wav_format.FormatTag = 1;
-    fmt_block->wav_format.Channels = 2;
-    fmt_block->wav_format.SamplesPerSec = 44100;
-    fmt_block->wav_format.BlockAlign = 4;
-    fmt_block->wav_format.BitsPerSample = 16;
-    fmt_block->wav_format.AvgBytesPerSec = fmt_block->wav_format.SamplesPerSec
-                                           * fmt_block->wav_format.Channels
-                                           * fmt_block->wav_format.BitsPerSample
-                                           / 8;
+//     strncpy(fmt_block->fmt_id, "fmt ", 4);
+//     fmt_block->fmt_size = sizeof(struct WAVE_FORMAT_DEF);
+//     fmt_block->wav_format.FormatTag = 1;
+//     fmt_block->wav_format.Channels = 2;
+//     fmt_block->wav_format.SamplesPerSec = 44100;
+//     fmt_block->wav_format.BlockAlign = 4;
+//     fmt_block->wav_format.BitsPerSample = 16;
+//     fmt_block->wav_format.AvgBytesPerSec = fmt_block->wav_format.SamplesPerSec
+//                                            * fmt_block->wav_format.Channels
+//                                            * fmt_block->wav_format.BitsPerSample
+//                                            / 8;
 
-    strncpy((char*)&header_buffer[offset], "data", 4);
-    offset += 4;
-    {
-        uint32_t * data_size = (uint32_t *)&header_buffer[offset];
-        offset += 4;
-        *data_size = size - offset;
-    }
+//     strncpy((char*)&header_buffer[offset], "data", 4);
+//     offset += 4;
+//     {
+//         uint32_t * data_size = (uint32_t *)&header_buffer[offset];
+//         offset += 4;
+//         *data_size = size - offset;
+//     }
 
 
-    lseek(fd, 0, DFS_SEEK_SET);
-    write(fd, header_buffer, offset);
-}
+//     lseek(fd, 0, DFS_SEEK_SET);
+//     write(fd, header_buffer, offset);
+// }
 
 /* 信号量控制块 */
 //static struct rt_semaphore sem;
 //rt_err_t rec_test(const char * i2c_bus_device_name)
-static const char * i2c_bus_device_name = "i2c1";
+//static const char * i2c_bus_device_name = "i2c1";
 
 rt_err_t codec_hw_init(const char * i2c_bus_device_name)
 {
@@ -841,7 +843,7 @@ rt_err_t codec_hw_init(const char * i2c_bus_device_name)
 //     }
 
     /* register the device */
-    return rt_device_register(&codec.parent, "snd", RT_DEVICE_FLAG_WRONLY | RT_DEVICE_FLAG_DMA_TX);
+    return rt_device_register(&codec.parent, "snd", RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_DMA_TX);
 }
 
 // #ifdef RT_USING_FINSH
@@ -922,6 +924,9 @@ static void codec_dma_isr(void)
 /*DMA接收录音数据*/
 void DMA1_Stream0_IRQHandler(void)
 {
+	/* enter interrupt */
+    rt_interrupt_enter();
+	
     /* Test on DMA Stream Transfer Complete interrupt */
     if(DMA_GetITStatus(AUDIO_I2S_RX_DMA_STREAM, AUDIO_I2S_RX_DMA_IT_TC))
     {
@@ -945,6 +950,9 @@ void DMA1_Stream0_IRQHandler(void)
             rt_kprintf("no rx buff!\r\n");
         }
     }
+	
+	/* leave interrupt */
+    rt_interrupt_leave();
 }
 
 /*DMA 发送音频数据到 wm8978*/

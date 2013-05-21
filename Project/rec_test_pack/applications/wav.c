@@ -88,6 +88,8 @@ static rt_err_t wav_header_gen(int fd, rt_size_t size)
 
     lseek(fd, 0, DFS_SEEK_SET);
     write(fd, header_buffer, offset);
+	
+	return RT_EOK;
 }
 
 void wav(char* filename)
@@ -109,7 +111,7 @@ void wav(char* filename)
     {
         rt_uint8_t* buf;
         rt_size_t 	len;
-        rt_device_t device;
+		rt_device_t player;
         char riff_chunk[4];
 
         /* wav format check */
@@ -202,29 +204,29 @@ void wav(char* filename)
             }
         } /* get data size */
 
-        /* open audio device and set tx done call back */
-        device = rt_device_find("snd");
-        if(device == RT_NULL)
+        /* open audio player and set tx done call back */
+        player = rt_device_find("snd");
+        if(player == RT_NULL)
         {
-            rt_kprintf("audio device not found!\r\n");
+            rt_kprintf("audio player not found!\r\n");
             return;
         }
 
         /* set samplerate */
         {
             int SamplesPerSec = fmt_block.wav_format.SamplesPerSec;
-            if(rt_device_control(device, CODEC_CMD_SAMPLERATE, &SamplesPerSec)
+            if(rt_device_control(player, CODEC_CMD_SAMPLERATE, &SamplesPerSec)
                     != RT_EOK)
             {
-                rt_kprintf("audio device doesn't support this sample rate: %d\r\n",
+                rt_kprintf("audio player doesn't support this sample rate: %d\r\n",
                            SamplesPerSec);
                 return;
             }
         }
 
         //设置发送完成回调函数,让DAC数据发完时执行wav_tx_done函数释放空间.
-        rt_device_set_tx_complete(device, wav_tx_done);
-        rt_device_open(device, RT_DEVICE_OFLAG_WRONLY);
+        rt_device_set_tx_complete(player, wav_tx_done);
+        rt_device_open(player, RT_DEVICE_OFLAG_WRONLY);
 
         do
         {
@@ -235,7 +237,7 @@ void wav(char* filename)
             //读取成功就把数据写入设备
             if (len > 0)
             {
-                rt_device_write(device, 0, buf, len);
+                rt_device_write(player, 0, buf, len);
             }
             //否则释放刚才申请的空间,正常情况下是读到文件尾时.
             else
@@ -245,8 +247,8 @@ void wav(char* filename)
         }
         while (len != 0);
 
-        /* close device and file */
-        rt_device_close(device);
+        /* close player and file */
+        rt_device_close(player);
         close(fd);
     }
 }
@@ -254,90 +256,53 @@ FINSH_FUNCTION_EXPORT(wav, wav test. e.g: wav("/test.wav"))
 
 /*录音*/
 #include "codec_wm8978_i2c.h"
-
+#define TEST_FN		"/rec.wav"
 uint8_t rx_buf[RX_BUFF_SIZE];
 void wav_rec(void)
 {
-	struct codec_device *codec;
-	//uint16_t * tx_data_buffer;
-	//uint16_t * rx_data_buffer;
-	//uint16_t * tmp;
-	//uint32_t i;
+	rt_device_t record;
 	
 	uint32_t rx_size;
+	uint32_t count = 0;
+	int fd;
 	
-	codec=(struct codec_device *)rt_device_find("snd");
-	if(codec==0)
+	record=rt_device_find("snd");
+	if(record==0)
 	{
 		rt_kprintf("audio device not found!\r\n");
 		return ;
 	}
-	codec->parent.init(&codec->parent);
-	//codec_init(&codec.parent);
-
-	codec->parent.open(&codec->parent,O_RDONLY);
-	//I2S_Cmd(AUDIO_I2S_RX_PORT, ENABLE);
-
-	//r06 |= MS;
-	//codec_send(r06);
-
-	/* rec test */
+	
+	/* create file. */
+	fd = open(TEST_FN, O_WRONLY | O_CREAT | O_TRUNC, 0);
+	if (fd < 0)
 	{
-		rt_err_t result;
-		uint32_t count = 0;
-		int fd;
+		rt_kprintf("open file for write failed\n");
+		return;
+	}
+	
+	record->init(record);
+	record->open(record,RT_DEVICE_OFLAG_RDONLY);
+	rt_kprintf("REC start!\r\n");
+	while (1)
+	{
 
-		/* 初始化信号量，初始值是0 */
-		//result = rt_sem_init(&sem, "sem", 0, RT_IPC_FLAG_FIFO);
+		rx_size=record->read(record,0,rx_buf,RX_BUFF_SIZE);
+		/* write to file */
+		write(fd,rx_buf,rx_size);
 
-#define TEST_FN		"/rec.wav"
-
-		/* create file. */
-		fd = open(TEST_FN, O_WRONLY | O_CREAT | O_TRUNC, 0);
-		if (fd < 0)
+		count++;		
+		if (count > 2000)
 		{
-			rt_kprintf("open file for write failed\n");
-			return;
+			record->close(record);
+			/* add header */
+			wav_header_gen(fd, RX_BUFF_SIZE * count);
+			rt_kprintf("REC done, count: %u\r\n", count);
+
+			close(fd);
+			break;
 		}
-
-		rt_kprintf("REC start!\r\n");
-		
-	//	DMA_RX_Configuration((rt_uint32_t)&codec.rx_data_list[codec.rx_rec_index].buffer[0],
-	//	                     RX_BUFF_SIZE/sizeof(rt_uint16_t));
-	//	codec.rx_rec_index++;
-	//	NVIC_EnableIRQ(AUDIO_I2S_RX_DMA_IRQ);
-
-		while (1)
-		{
-			//result = rt_sem_take(&sem, RT_WAITING_FOREVER);
-
-			rx_size=codec->parent.read(&codec->parent,0,rx_buf,RX_BUFF_SIZE);
-			//rt_kprintf("count:%d\trx_size:%d\r",count,rx_size);
-			/* write to file */
-			write(fd,rx_buf,rx_size);
-
-			count++;
-			rt_kprintf("count:\t%d\n",count);
-			//codec->rx_read_index++;
-			//if (codec->rx_read_index == RX_BUFF_NUM)
-			//{
-			//	codec->rx_read_index = 0;
-			//}
-			
-
-			if (count > 2000)
-			{
-				//NVIC_DisableIRQ(AUDIO_I2S_RX_DMA_IRQ);
-				codec->parent.close(&codec->parent);
-				/* add header */
-				wav_header_gen(fd, RX_BUFF_SIZE * count);
-				rt_kprintf("REC done, count: %u\r\n", count);
-
-				close(fd);
-				break;
-			}
-		}
-	} /* rec test */
+	}
 }
 
 FINSH_FUNCTION_EXPORT(wav_rec, record test)

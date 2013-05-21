@@ -653,7 +653,7 @@ struct codec_data_node
 };
 
 #define RX_BUFF_SIZE        (2048)
-#define RX_BUFF_NUM    		(15)
+#define RX_BUFF_NUM    		(8)
 struct codec_rx_data_node
 {
     rt_uint16_t buffer[RX_BUFF_SIZE/sizeof(rt_uint16_t)];
