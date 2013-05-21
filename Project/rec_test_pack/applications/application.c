@@ -66,7 +66,7 @@ void rt_init_thread_entry(void* parameter)
 #endif
 
     /* do some thing here. */
-    //codec_hw_init("i2c1"); // start use finsh
+    codec_hw_init("i2c1"); // start use finsh
 }
 
 int rt_application_init()

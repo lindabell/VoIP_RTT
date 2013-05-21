@@ -473,6 +473,16 @@ static rt_err_t codec_open(rt_device_t dev, rt_uint16_t oflag)
 		rt_kprintf("O_RDONLY\n");
 		rt_sem_init(&sem, "sem", 0, RT_IPC_FLAG_FIFO);
 		I2S_Cmd(AUDIO_I2S_RX_PORT, ENABLE);	
+		
+		r06 |= MS;
+		codec_send(r06);
+		
+	DMA_RX_Configuration((rt_uint32_t)&codec.rx_data_list[codec.rx_rec_index].buffer[0],
+						 RX_BUFF_SIZE/sizeof(rt_uint16_t));
+	codec.rx_rec_index++;
+
+	NVIC_EnableIRQ(AUDIO_I2S_RX_DMA_IRQ);
+	
 	}
     else return RT_ERROR;
 
@@ -559,16 +569,6 @@ static rt_size_t codec_read(rt_device_t dev, rt_off_t pos, void *buffer, rt_size
 
 	device = (struct codec_device*) dev;
 	RT_ASSERT(device != RT_NULL);
-	if(device->rx_read_index==device->rx_rec_index)
-	{
-		r06 |= MS;
-		codec_send(r06);
-	}
-
-	DMA_RX_Configuration((rt_uint32_t)&device->rx_data_list[device->rx_rec_index].buffer[0],
-						 RX_BUFF_SIZE/sizeof(rt_uint16_t));
-	device->rx_rec_index++;
-	NVIC_EnableIRQ(AUDIO_I2S_RX_DMA_IRQ);
 
 	rt_sem_take(&sem, RT_WAITING_FOREVER);
 
@@ -932,6 +932,7 @@ void DMA1_Stream0_IRQHandler(void)
         DMA_RX_Configuration((rt_uint32_t)&codec.rx_data_list[codec.rx_rec_index].buffer[0],
                              RX_BUFF_SIZE/sizeof(rt_uint16_t));
         codec.rx_rec_index++;
+
         if(codec.rx_rec_index == RX_BUFF_NUM)
         {
             codec.rx_rec_index = 0;

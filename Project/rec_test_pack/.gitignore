@@ -16,3 +16,4 @@ jlink_flash.txt
 build/
 project.uvgui.Administrator
 project_rt-thread_stm32f4xx.dep
+rt-thread_stm32f4xx

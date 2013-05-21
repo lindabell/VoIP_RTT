@@ -45,6 +45,51 @@ struct FMT_BLOCK_DEF
     struct WAVE_FORMAT_DEF wav_format;
 };
 
+ALIGN(4)
+static uint8_t header_buffer[100];
+static rt_err_t wav_header_gen(int fd, rt_size_t size)
+{
+    struct RIFF_HEADER_DEF * riff_header;
+    struct FMT_BLOCK_DEF *   fmt_block;
+    rt_size_t offset = 0;
+
+    memset(&header_buffer, 0, sizeof(header_buffer));
+
+    riff_header = (struct RIFF_HEADER_DEF *)&header_buffer[offset];
+    offset += sizeof(struct RIFF_HEADER_DEF);
+
+    fmt_block = (struct FMT_BLOCK_DEF *)&header_buffer[offset];
+    offset += sizeof(struct FMT_BLOCK_DEF);
+
+    strncpy(riff_header->riff_id, "RIFF", 4);
+    riff_header->riff_size = size - 8;
+    strncpy(riff_header->riff_format, "WAVE", 4);
+
+    strncpy(fmt_block->fmt_id, "fmt ", 4);
+    fmt_block->fmt_size = sizeof(struct WAVE_FORMAT_DEF);
+    fmt_block->wav_format.FormatTag = 1;
+    fmt_block->wav_format.Channels = 2;
+    fmt_block->wav_format.SamplesPerSec = 44100;
+    fmt_block->wav_format.BlockAlign = 4;
+    fmt_block->wav_format.BitsPerSample = 16;
+    fmt_block->wav_format.AvgBytesPerSec = fmt_block->wav_format.SamplesPerSec
+                                           * fmt_block->wav_format.Channels
+                                           * fmt_block->wav_format.BitsPerSample
+                                           / 8;
+
+    strncpy((char*)&header_buffer[offset], "data", 4);
+    offset += 4;
+    {
+        uint32_t * data_size = (uint32_t *)&header_buffer[offset];
+        offset += 4;
+        *data_size = size - offset;
+    }
+
+
+    lseek(fd, 0, DFS_SEEK_SET);
+    write(fd, header_buffer, offset);
+}
+
 void wav(char* filename)
 {
     int fd;
@@ -207,3 +252,92 @@ void wav(char* filename)
 }
 FINSH_FUNCTION_EXPORT(wav, wav test. e.g: wav("/test.wav"))
 
+/*录音*/
+#include "codec_wm8978_i2c.h"
+
+uint8_t rx_buf[RX_BUFF_SIZE];
+void wav_rec(void)
+{
+	struct codec_device *codec;
+	//uint16_t * tx_data_buffer;
+	//uint16_t * rx_data_buffer;
+	//uint16_t * tmp;
+	//uint32_t i;
+	
+	uint32_t rx_size;
+	
+	codec=(struct codec_device *)rt_device_find("snd");
+	if(codec==0)
+	{
+		rt_kprintf("audio device not found!\r\n");
+		return ;
+	}
+	codec->parent.init(&codec->parent);
+	//codec_init(&codec.parent);
+
+	codec->parent.open(&codec->parent,O_RDONLY);
+	//I2S_Cmd(AUDIO_I2S_RX_PORT, ENABLE);
+
+	//r06 |= MS;
+	//codec_send(r06);
+
+	/* rec test */
+	{
+		rt_err_t result;
+		uint32_t count = 0;
+		int fd;
+
+		/* 初始化信号量，初始值是0 */
+		//result = rt_sem_init(&sem, "sem", 0, RT_IPC_FLAG_FIFO);
+
+#define TEST_FN		"/rec.wav"
+
+		/* create file. */
+		fd = open(TEST_FN, O_WRONLY | O_CREAT | O_TRUNC, 0);
+		if (fd < 0)
+		{
+			rt_kprintf("open file for write failed\n");
+			return;
+		}
+
+		rt_kprintf("REC start!\r\n");
+		
+	//	DMA_RX_Configuration((rt_uint32_t)&codec.rx_data_list[codec.rx_rec_index].buffer[0],
+	//	                     RX_BUFF_SIZE/sizeof(rt_uint16_t));
+	//	codec.rx_rec_index++;
+	//	NVIC_EnableIRQ(AUDIO_I2S_RX_DMA_IRQ);
+
+		while (1)
+		{
+			//result = rt_sem_take(&sem, RT_WAITING_FOREVER);
+
+			rx_size=codec->parent.read(&codec->parent,0,rx_buf,RX_BUFF_SIZE);
+			//rt_kprintf("count:%d\trx_size:%d\r",count,rx_size);
+			/* write to file */
+			write(fd,rx_buf,rx_size);
+
+			count++;
+			rt_kprintf("count:\t%d\n",count);
+			//codec->rx_read_index++;
+			//if (codec->rx_read_index == RX_BUFF_NUM)
+			//{
+			//	codec->rx_read_index = 0;
+			//}
+			
+
+			if (count > 2000)
+			{
+				//NVIC_DisableIRQ(AUDIO_I2S_RX_DMA_IRQ);
+				codec->parent.close(&codec->parent);
+				/* add header */
+				wav_header_gen(fd, RX_BUFF_SIZE * count);
+				rt_kprintf("REC done, count: %u\r\n", count);
+
+				close(fd);
+				break;
+			}
+		}
+	} /* rec test */
+}
+
+FINSH_FUNCTION_EXPORT(wav_rec, record test)
