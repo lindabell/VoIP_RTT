@@ -479,7 +479,37 @@
                 <Header RelativePath="applications\JSON_parser.h" />
                 <Header RelativePath="d:\Keil\ARM\RV31\INC\stddef.h" />
             </File>
-            <File RelativePath=".\applications\tftp.c" FileType="1" Output="tftp.o" ro="0" bss="0" rw="0" />
+            <File RelativePath=".\applications\tftp.c" FileType="1" Output="tftp.o" ro="0" bss="0" rw="0">
+                <Header RelativePath="..\..\..\..\RTT\include\rtthread.h" />
+                <Header RelativePath="..\..\..\..\RTT\include\rtdef.h" />
+                <Header RelativePath=".\rtconfig.h" />
+                <Header RelativePath="d:\Keil\ARM\RV31\INC\stdarg.h" />
+                <Header RelativePath="..\..\..\..\RTT\include\rtdebug.h" />
+                <Header RelativePath="..\..\..\..\RTT\include\rtservice.h" />
+                <Header RelativePath="..\..\..\..\RTT\include\rtm.h" />
+                <Header RelativePath="..\..\..\..\RTT\include\rtthread.h" />
+                <Header RelativePath="..\..\..\..\RTT\components\dfs\include\dfs_posix.h" />
+                <Header RelativePath="..\..\..\..\RTT\components\dfs\include\dfs_file.h" />
+                <Header RelativePath="..\..\..\..\RTT\components\dfs\include\dfs_def.h" />
+                <Header RelativePath="d:\Keil\ARM\RV31\INC\stdio.h" />
+                <Header RelativePath="..\..\..\..\RTT\components\dfs\include\dfs.h" />
+                <Header RelativePath="d:\Keil\ARM\RV31\INC\string.h" />
+                <Header RelativePath="..\..\..\..\RTT\components\dfs\include\dfs_fs.h" />
+                <Header RelativePath="..\..\..\..\RTT\components\net\lwip\src\include\lwip/sockets.h" />
+                <Header RelativePath="..\..\..\..\RTT\components\net\lwip\src\include\lwip/opt.h" />
+                <Header RelativePath="..\..\..\..\RTT\components\net\lwip\src\lwipopts.h" />
+                <Header RelativePath="d:\Keil\ARM\RV31\INC\stdlib.h" />
+                <Header RelativePath="..\..\..\..\RTT\components\net\lwip\src\include\lwip/debug.h" />
+                <Header RelativePath="..\..\..\..\RTT\components\net\lwip\src\include\lwip/arch.h" />
+                <Header RelativePath="..\..\..\..\RTT\components\net\lwip\src\arch\include\arch/cc.h" />
+                <Header RelativePath="..\..\..\..\RTT\include\rthw.h" />
+                <Header RelativePath="d:\Keil\ARM\RV31\INC\stddef.h" />
+                <Header RelativePath="..\..\..\..\RTT\components\net\lwip\src\include\ipv4\lwip/ip_addr.h" />
+                <Header RelativePath="..\..\..\..\RTT\components\net\lwip\src\include\lwip/def.h" />
+                <Header RelativePath="..\..\..\..\RTT\components\net\lwip\src\include\ipv4\lwip/inet.h" />
+                <Header RelativePath="..\..\..\..\RTT\components\finsh\finsh.h" />
+                <Header RelativePath="d:\Keil\ARM\RV31\INC\ctype.h" />
+            </File>
         </Filter>
         <Filter Name="Drivers">
             <File RelativePath="drivers\touch.c" FileType="1" Output="touch.o" ro="0" bss="0" rw="0">
