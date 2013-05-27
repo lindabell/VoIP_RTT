@@ -238,9 +238,11 @@ static rt_err_t codec_init(rt_device_t dev)
 
 //  codec_send(REG_LEFT_MIXER | AUXLMIXVOL_0DB | AUXL2LMIX | BYPLMIXVOL_6DB | BYPL2LMIX | DACL2LMIX);
 //  codec_send(REG_RIGHT_MIXER| AUXRMIXVOL_0DB | AUXR2RMIX | BYPRMIXVOL_6DB | BYPR2RMIX | DACR2RMIX);
-    codec_send(REG_LEFT_MIXER | AUXLMIXVOL_0DB | BYPLMIXVOL_6DB | BYPL2LMIX | DACL2LMIX);
-    codec_send(REG_RIGHT_MIXER| AUXRMIXVOL_0DB | BYPRMIXVOL_6DB | BYPR2RMIX | DACR2RMIX);
-
+    //codec_send(REG_LEFT_MIXER | AUXLMIXVOL_0DB | BYPLMIXVOL_6DB | BYPL2LMIX | DACL2LMIX);
+    //codec_send(REG_RIGHT_MIXER| AUXRMIXVOL_0DB | BYPRMIXVOL_6DB | BYPR2RMIX | DACR2RMIX);
+codec_send(REG_LEFT_MIXER | AUXLMIXVOL_0DB | BYPLMIXVOL_6DB  | DACL2LMIX);
+codec_send(REG_RIGHT_MIXER| AUXRMIXVOL_0DB | BYPRMIXVOL_6DB  | DACR2RMIX);
+	
     /*   */
     codec_send(REG_LEFT_ADC_BOOST  | PGABOOSTL | L2_2BOOSTVOL_DISABLED | AUXL2BOOSTVOL_DISABLED);
     codec_send(REG_RIGHT_ADC_BOOST | PGABOOSTR | R2_2BOOSTVOL_DISABLED | AUXR2BOOSTVOL_DISABLED);
@@ -625,82 +627,7 @@ static rt_size_t codec_write(rt_device_t dev, rt_off_t pos,const void* buffer, r
     return size;
 }
 
-/**********************************/
-// #include <dfs_posix.h>
 
-// struct RIFF_HEADER_DEF
-// {
-//     char riff_id[4];     // 'R','I','F','F'
-//     uint32_t riff_size;
-//     char riff_format[4]; // 'W','A','V','E'
-// };
-
-// struct WAVE_FORMAT_DEF
-// {
-//     uint16_t FormatTag;
-//     uint16_t Channels;
-//     uint32_t SamplesPerSec;
-//     uint32_t AvgBytesPerSec;
-//     uint16_t BlockAlign;
-//     uint16_t BitsPerSample;
-// };
-
-// struct FMT_BLOCK_DEF
-// {
-//     char fmt_id[4];    // 'f','m','t',' '
-//     uint32_t fmt_size;
-//     struct WAVE_FORMAT_DEF wav_format;
-// };
-
-// ALIGN(4)
-// static uint8_t header_buffer[100];
-// static rt_err_t wav_header_gen(int fd, rt_size_t size)
-// {
-//     struct RIFF_HEADER_DEF * riff_header;
-//     struct FMT_BLOCK_DEF *   fmt_block;
-//     rt_size_t offset = 0;
-
-//     memset(&header_buffer, 0, sizeof(header_buffer));
-
-//     riff_header = (struct RIFF_HEADER_DEF *)&header_buffer[offset];
-//     offset += sizeof(struct RIFF_HEADER_DEF);
-
-//     fmt_block = (struct FMT_BLOCK_DEF *)&header_buffer[offset];
-//     offset += sizeof(struct FMT_BLOCK_DEF);
-
-//     strncpy(riff_header->riff_id, "RIFF", 4);
-//     riff_header->riff_size = size - 8;
-//     strncpy(riff_header->riff_format, "WAVE", 4);
-
-//     strncpy(fmt_block->fmt_id, "fmt ", 4);
-//     fmt_block->fmt_size = sizeof(struct WAVE_FORMAT_DEF);
-//     fmt_block->wav_format.FormatTag = 1;
-//     fmt_block->wav_format.Channels = 2;
-//     fmt_block->wav_format.SamplesPerSec = 44100;
-//     fmt_block->wav_format.BlockAlign = 4;
-//     fmt_block->wav_format.BitsPerSample = 16;
-//     fmt_block->wav_format.AvgBytesPerSec = fmt_block->wav_format.SamplesPerSec
-//                                            * fmt_block->wav_format.Channels
-//                                            * fmt_block->wav_format.BitsPerSample
-//                                            / 8;
-
-//     strncpy((char*)&header_buffer[offset], "data", 4);
-//     offset += 4;
-//     {
-//         uint32_t * data_size = (uint32_t *)&header_buffer[offset];
-//         offset += 4;
-//         *data_size = size - offset;
-//     }
-
-
-//     lseek(fd, 0, DFS_SEEK_SET);
-//     write(fd, header_buffer, offset);
-// }
-
-/* 信号量控制块 */
-//static struct rt_semaphore sem;
-//rt_err_t rec_test(const char * i2c_bus_device_name)
-//static const char * i2c_bus_device_name = "i2c1";
 
 rt_err_t codec_hw_init(const char * i2c_bus_device_name)
 {
@@ -748,87 +675,10 @@ rt_err_t codec_hw_init(const char * i2c_bus_device_name)
     codec.rx_rec_index = 0;
     codec.rx_read_index = 0;
 
-// #define RX_BUFFER_WORD_SIZE      512
-//     /* rec test */
-//     {
-//         uint16_t * tx_data_buffer;
-//         uint16_t * rx_data_buffer;
-//         uint16_t * tmp;
-//         uint32_t i;
-
-//         codec_init(&codec.parent);
-
-//         I2S_Cmd(AUDIO_I2S_RX_PORT, ENABLE);
-
-//         r06 |= MS;
-//         codec_send(r06);
-
-//         /* rec test */
-//         {
-//             rt_err_t result;
-//             uint32_t count = 0;
-//             int fd;
-
-//             /* 初始化信号量，初始值是0 */
-//             result = rt_sem_init(&sem, "sem", 0, RT_IPC_FLAG_FIFO);
-
-// #define TEST_FN		"/rec.wav"
-
-//             /* create file. */
-//             fd = open(TEST_FN, O_WRONLY | O_CREAT | O_TRUNC, 0);
-//             if (fd < 0)
-//             {
-//                 rt_kprintf("open file for write failed\n");
-//                 return;
-//             }
-
-//             rt_kprintf("REC start!\r\n");
-//             DMA_RX_Configuration((rt_uint32_t)&codec.rx_data_list[codec.rx_rec_index].buffer[0],
-//                                  RX_BUFF_SIZE/sizeof(rt_uint16_t));
-//             codec.rx_rec_index++;
-//             NVIC_EnableIRQ(AUDIO_I2S_RX_DMA_IRQ);
-
-//             while(1)
-//             {
-//                 result = rt_sem_take(&sem, RT_WAITING_FOREVER);
-
-//                 while(codec.rx_read_index != codec.rx_rec_index)
-//                 {
-//                     /* write to file */
-//                     write(fd, codec.rx_data_list[codec.rx_read_index].buffer,
-//                           RX_BUFF_SIZE);
-
-//                     count++;
-//                     codec.rx_read_index++;
-//                     if(codec.rx_read_index == RX_BUFF_NUM)
-//                     {
-//                         codec.rx_read_index = 0;
-//                     }
-//                 }
-
-//                 if(count > 2000)
-//                 {
-//                     NVIC_DisableIRQ(AUDIO_I2S_RX_DMA_IRQ);
-
-//                     /* add header */
-//                     wav_header_gen(fd, RX_BUFF_SIZE * count);
-//                     rt_kprintf("REC done, count: %u\r\n", count);
-
-//                     close(fd);
-//                     break;
-//                 }
-//             }
-//         } /* rec test */
-//     }
-
     /* register the device */
     return rt_device_register(&codec.parent, "snd", RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_DMA_TX);
 }
 
-// #ifdef RT_USING_FINSH
-// #include <finsh.h>
-// FINSH_FUNCTION_EXPORT(rec_test, rec test)
-// #endif
 
 static void codec_dma_isr(void)
 {
