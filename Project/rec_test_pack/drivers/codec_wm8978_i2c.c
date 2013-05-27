@@ -201,34 +201,23 @@ static void codec_send(rt_uint16_t s_data)
 
 static rt_err_t codec_init(rt_device_t dev)
 {
-    codec_send(REG_SOFTWARE_RESET);
+    //software reset 软件复位
+	codec_send(REG_SOFTWARE_RESET);
 
     // 1.5x boost power up sequence.
-    // Mute all outputs.
+    // Mute all outputs. 静音所有输出
     codec_send(REG_LOUT1_VOL | LOUT1MUTE);
     codec_send(REG_ROUT1_VOL | ROUT1MUTE);
     codec_send(REG_LOUT2_VOL | LOUT2MUTE);
     codec_send(REG_ROUT2_VOL | ROUT2MUTE);
-    // Enable unused output chosen from L/ROUT2, OUT3 or OUT4.
-    codec_send(REG_POWER_MANAGEMENT3 | OUT4EN);
-    // Set BUFDCOPEN=1 and BUFIOEN=1 in register R1
-    codec_send(REG_POWER_MANAGEMENT1 | BUFDCOPEN | BUFIOEN);
-    // Set SPKBOOST=1 in register R49.
-    codec_send(REG_OUTPUT | SPKBOOST);
-    // Set VMIDSEL[1:0] to required value in register R1.
-    codec_send(REG_POWER_MANAGEMENT1 | BUFDCOPEN | BUFIOEN | VMIDSEL_75K);
-    // Set L/RMIXEN=1 and DACENL/R=1 in register R3.
-    codec_send(REG_POWER_MANAGEMENT3 | LMIXEN | RMIXEN | DACENL | DACENR);
-    // Set BIASEN=1 in register R1.
-    codec_send(REG_POWER_MANAGEMENT1 | BUFDCOPEN | BUFIOEN | VMIDSEL_75K);
-    //codec_send(REG_POWER_MANAGEMENT1 | BUFDCOPEN | BUFIOEN | VMIDSEL_75K | BIASEN);
-    // Set L/ROUT2EN=1 in register R3.
-    codec_send(REG_POWER_MANAGEMENT3 | LMIXEN | RMIXEN | DACENL | DACENR | LOUT2EN | ROUT2EN);
-    // Enable other mixers as required.
-    // Enable other outputs as required.
+ 
+	codec_send(REG_POWER_MANAGEMENT3 | LMIXEN | RMIXEN | DACENL | DACENR | LOUT2EN | ROUT2EN);
+    codec_send(REG_BEEP | INVROUT2);	//Set LOUT2/ROUT2 in BTL operation.
+	
+	//OUT1 enable BOOT enable PGA enable  ADC enable
     codec_send(REG_POWER_MANAGEMENT2 | LOUT1EN | ROUT1EN | BOOSTENL | BOOSTENR | INPPGAENL | INPPGAENR | ADCENL | ADCENR);
 
-    // Digital inferface setup.
+    // Digital inferface setup. 设置接口参数（包括立体声等）
     codec_send(REG_AUDIO_INTERFACE | BCP_NORMAL | LRP_NORMAL | WL_16BITS | FMT_I2S);
 
     // PLL setup. (MCLK: 12.2896 for 44.1K)
@@ -238,36 +227,26 @@ static rt_err_t codec_init(rt_device_t dev)
     codec_send(REG_PLL_K3 | ((PLL_K_112896>>0) & 0x1FF));
 
     codec_send(REG_POWER_MANAGEMENT1 | BUFDCOPEN | BUFIOEN | VMIDSEL_75K | MICBEN | BIASEN | PLLEN);
-//    codec_send(REG_POWER_MANAGEMENT1 | BUFDCOPEN | BUFIOEN | VMIDSEL_75K | BIASEN | PLLEN);
+
     codec_send(r06);
 
     // Enable DAC 128x oversampling.
     codec_send(REG_DAC | DACOSR128);
 
-    // Set LOUT2/ROUT2 in BTL operation.
-    codec_send(REG_BEEP | INVROUT2);
-
     /* MIC config. */
-    codec_send(REG_INPUT
-               | MBVSEL_0_65AVDD
-               | RIN2INPVGA | RIP2INPVGA
-               | LIN2INPVGA | LIP2INPVGA);
+    codec_send(REG_INPUT | MBVSEL_0_65AVDD | RIN2INPVGA | RIP2INPVGA | LIN2INPVGA | LIP2INPVGA);
 
-//    codec_send(REG_LEFT_MIXER
-//               | AUXLMIXVOL_0DB | AUXL2LMIX | BYPLMIXVOL_6DB | BYPL2LMIX | DACL2LMIX);
-//    codec_send(REG_RIGHT_MIXER
-//               | AUXRMIXVOL_0DB | AUXR2RMIX | BYPRMIXVOL_6DB | BYPR2RMIX | DACR2RMIX);
-    codec_send(REG_LEFT_MIXER
-               | AUXLMIXVOL_0DB  | BYPLMIXVOL_6DB | BYPL2LMIX | DACL2LMIX);
-    codec_send(REG_RIGHT_MIXER
-               | AUXRMIXVOL_0DB  | BYPRMIXVOL_6DB | BYPR2RMIX | DACR2RMIX);
+//  codec_send(REG_LEFT_MIXER | AUXLMIXVOL_0DB | AUXL2LMIX | BYPLMIXVOL_6DB | BYPL2LMIX | DACL2LMIX);
+//  codec_send(REG_RIGHT_MIXER| AUXRMIXVOL_0DB | AUXR2RMIX | BYPRMIXVOL_6DB | BYPR2RMIX | DACR2RMIX);
+    codec_send(REG_LEFT_MIXER | AUXLMIXVOL_0DB | BYPLMIXVOL_6DB | BYPL2LMIX | DACL2LMIX);
+    codec_send(REG_RIGHT_MIXER| AUXRMIXVOL_0DB | BYPRMIXVOL_6DB | BYPR2RMIX | DACR2RMIX);
 
     /*   */
-    codec_send(REG_LEFT_ADC_BOOST | PGABOOSTL | L2_2BOOSTVOL_DISABLED | AUXL2BOOSTVOL_DISABLED);
+    codec_send(REG_LEFT_ADC_BOOST  | PGABOOSTL | L2_2BOOSTVOL_DISABLED | AUXL2BOOSTVOL_DISABLED);
     codec_send(REG_RIGHT_ADC_BOOST | PGABOOSTR | R2_2BOOSTVOL_DISABLED | AUXR2BOOSTVOL_DISABLED);
 
     /* GPIO mute. */
-//    codec_send(REG_LEFT_PGA_GAIN | INPPGAMUTEL);
+//    codec_send(REG_LEFT_PGA_GAIN  | INPPGAMUTEL);
 //    codec_send(REG_RIGHT_PGA_GAIN | INPPGAMUTER);
 
     // Set output volume.
