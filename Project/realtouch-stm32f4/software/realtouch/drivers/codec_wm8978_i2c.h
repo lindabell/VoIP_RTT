@@ -644,6 +644,38 @@ struct codec_eq_args
 };
 typedef struct codec_eq_args* codec_eq_args_t;
 
+#define DATA_NODE_MAX 5
+/* data node for Tx Mode */
+struct codec_data_node
+{
+    rt_uint16_t *data_ptr;
+    rt_size_t  data_size;
+};
+
+#define RX_BUFF_SIZE        (2048)
+#define RX_BUFF_NUM    		(8)
+struct codec_rx_data_node
+{
+    rt_uint16_t buffer[RX_BUFF_SIZE/sizeof(rt_uint16_t)];
+    rt_size_t  data_size;
+};
+struct codec_device
+{
+    /* inherit from rt_device */
+    struct rt_device parent;
+
+    /* pcm data list */
+    struct codec_data_node data_list[DATA_NODE_MAX];
+    rt_uint16_t read_index, put_index;
+
+    /* pcm rx_data list */
+    struct codec_rx_data_node rx_data_list[RX_BUFF_NUM];
+    rt_uint16_t rx_rec_index, rx_read_index;
+
+    /* i2c mode */
+    struct rt_i2c_bus_device * i2c_device;
+};
+
 extern rt_err_t codec_hw_init(const char * i2c_bus_device_name);
 
 #endif	// #ifndef __CODEC_H__
