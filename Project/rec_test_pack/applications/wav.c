@@ -257,7 +257,7 @@ FINSH_FUNCTION_EXPORT(wav, wav test. e.g: wav("/test.wav"))
 /*Â¼Òô*/
 #include "codec_wm8978_i2c.h"
 #define TEST_FN		"/rec.wav"
-uint8_t rx_buf[RX_BUFF_SIZE];
+//uint8_t rx_buf[RX_BUFF_SIZE];
 void wav_rec(void)
 {
 	rt_device_t record;
@@ -265,6 +265,9 @@ void wav_rec(void)
 	uint32_t rx_size;
 	uint32_t count = 0;
 	int fd;
+	uint8_t *rx_buf;
+	rx_buf=rt_malloc(RX_BUFF_SIZE);
+	RT_ASSERT(rx_buf!=0);
 	
 	record=rt_device_find("snd");
 	if(record==0)
@@ -303,6 +306,8 @@ void wav_rec(void)
 			break;
 		}
 	}
+	
+	rt_free(rx_buf);
 }
 
 FINSH_FUNCTION_EXPORT(wav_rec, record test)

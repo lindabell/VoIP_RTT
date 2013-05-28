@@ -45,7 +45,7 @@ static void codec_send(rt_uint16_t s_data);
 
 
 
-struct codec_device codec;
+struct codec_device *codec;
 
 static uint16_t r06 = REG_CLOCK_GEN | CLKSEL_PLL | MCLK_DIV2 | BCLK_DIV8;
 
@@ -186,7 +186,7 @@ static void codec_send(rt_uint16_t s_data)
     struct rt_i2c_msg msg;
     rt_uint8_t send_buffer[2];
 
-    RT_ASSERT(codec.i2c_device != RT_NULL);
+    RT_ASSERT(codec->i2c_device != RT_NULL);
 
     send_buffer[0] = (rt_uint8_t)(s_data>>8);
     send_buffer[1] = (rt_uint8_t)(s_data);
@@ -196,7 +196,7 @@ static void codec_send(rt_uint16_t s_data)
     msg.len = 2;
     msg.buf = send_buffer;
 
-    rt_i2c_transfer(codec.i2c_device, &msg, 1);
+    rt_i2c_transfer(codec->i2c_device, &msg, 1);
 }
 
 static rt_err_t codec_init(rt_device_t dev)
@@ -456,9 +456,9 @@ static rt_err_t codec_open(rt_device_t dev, rt_uint16_t oflag)
 		r06 |= MS;
 		codec_send(r06);
 		
-	DMA_RX_Configuration((rt_uint32_t)&codec.rx_data_list[codec.rx_rec_index].buffer[0],
+	DMA_RX_Configuration((rt_uint32_t)&codec->rx_data_list[codec->rx_rec_index].buffer[0],
 						 RX_BUFF_SIZE/sizeof(rt_uint16_t));
-	codec.rx_rec_index++;
+	codec->rx_rec_index++;
 
 	NVIC_EnableIRQ(AUDIO_I2S_RX_DMA_IRQ);
 	
@@ -490,17 +490,17 @@ static rt_err_t codec_close(rt_device_t dev)
         codec_send(r06);
 
         /* remove all data node */
-        if (codec.parent.tx_complete != RT_NULL)
+        if (codec->parent.tx_complete != RT_NULL)
         {
             rt_base_t level = rt_hw_interrupt_disable();
 
-            while (codec.read_index != codec.put_index)
+            while (codec->read_index != codec->put_index)
             {
-                codec.parent.tx_complete(&codec.parent, codec.data_list[codec.read_index].data_ptr);
-                codec.read_index++;
-                if (codec.read_index >= DATA_NODE_MAX)
+                codec->parent.tx_complete(&codec->parent, codec->data_list[codec->read_index].data_ptr);
+                codec->read_index++;
+                if (codec->read_index >= DATA_NODE_MAX)
                 {
-                    codec.read_index = 0;
+                    codec->read_index = 0;
                 }
             }
 
@@ -633,13 +633,16 @@ rt_err_t codec_hw_init(const char * i2c_bus_device_name)
 {
     struct rt_i2c_bus_device * i2c_device;
 
+	codec=rt_malloc(sizeof(struct codec_device));
+	RT_ASSERT(codec!=0);
+	
     i2c_device = rt_i2c_bus_device_find(i2c_bus_device_name);
     if(i2c_device == RT_NULL)
     {
         rt_kprintf("i2c bus device %s not found!\r\n", i2c_bus_device_name);
         return -RT_ENOSYS;
     }
-    codec.i2c_device = i2c_device;
+    codec->i2c_device = i2c_device;
 
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA |
                            RCC_AHB1Periph_GPIOB |
@@ -656,27 +659,27 @@ rt_err_t codec_hw_init(const char * i2c_bus_device_name)
     GPIO_Configuration();
     I2S_Configuration(I2S_AudioFreq_96k);
 
-    codec.parent.type = RT_Device_Class_Sound;
-    codec.parent.rx_indicate = RT_NULL;
-    codec.parent.tx_complete = RT_NULL;
-    codec.parent.user_data   = RT_NULL;
+    codec->parent.type = RT_Device_Class_Sound;
+    codec->parent.rx_indicate = RT_NULL;
+    codec->parent.tx_complete = RT_NULL;
+    codec->parent.user_data   = RT_NULL;
 
-    codec.parent.control = codec_control;
-    codec.parent.init    = codec_init;
-    codec.parent.open    = codec_open;
-    codec.parent.close   = codec_close;
-    codec.parent.read    = codec_read;
-    codec.parent.write   = codec_write;
+    codec->parent.control = codec_control;
+    codec->parent.init    = codec_init;
+    codec->parent.open    = codec_open;
+    codec->parent.close   = codec_close;
+    codec->parent.read    = codec_read;
+    codec->parent.write   = codec_write;
 
     /* set read_index and put index to 0 */
-    codec.read_index = 0;
-    codec.put_index = 0;
+    codec->read_index = 0;
+    codec->put_index = 0;
 
-    codec.rx_rec_index = 0;
-    codec.rx_read_index = 0;
+    codec->rx_rec_index = 0;
+    codec->rx_read_index = 0;
 
     /* register the device */
-    return rt_device_register(&codec.parent, "snd", RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_DMA_TX);
+    return rt_device_register(&codec->parent, "snd", RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_DMA_TX);
 }
 
 
@@ -689,12 +692,12 @@ static void codec_dma_isr(void)
     /* enter interrupt */
     rt_interrupt_enter();
 
-    next_index = codec.read_index + 1;
+    next_index = codec->read_index + 1;
     if (next_index >= DATA_NODE_MAX)
         next_index = 0;
 
     /* save current data pointer */
-    data_ptr = codec.data_list[codec.read_index].data_ptr;
+    data_ptr = codec->data_list[codec->read_index].data_ptr;
 
 #if !CODEC_MASTER_MODE
     if (codec_sr_new)
@@ -705,12 +708,12 @@ static void codec_dma_isr(void)
     }
 #endif
 
-    codec.read_index = next_index;
-    if (next_index != codec.put_index)
+    codec->read_index = next_index;
+    if (next_index != codec->put_index)
     {
         /* enable next dma request */
-        DMA_TX_Configuration((rt_uint32_t)codec.data_list[codec.read_index].data_ptr,
-                             codec.data_list[codec.read_index].data_size);
+        DMA_TX_Configuration((rt_uint32_t)codec->data_list[codec->read_index].data_ptr,
+                             codec->data_list[codec->read_index].data_size);
 
 #if CODEC_MASTER_MODE
         if ((r06 & MS) == 0)
@@ -741,9 +744,9 @@ static void codec_dma_isr(void)
     } /* codec tx done. */
 
     /* notify transmitted complete. */
-    if (codec.parent.tx_complete != RT_NULL)
+    if (codec->parent.tx_complete != RT_NULL)
     {
-        codec.parent.tx_complete(&codec.parent, data_ptr);
+        codec->parent.tx_complete(&codec->parent, data_ptr);
     }
 
     /* leave interrupt */
@@ -763,18 +766,18 @@ void DMA1_Stream0_IRQHandler(void)
         DMA_ClearITPendingBit(AUDIO_I2S_RX_DMA_STREAM, AUDIO_I2S_RX_DMA_IT_TC);
 
         /* set next buffer */
-        DMA_RX_Configuration((rt_uint32_t)&codec.rx_data_list[codec.rx_rec_index].buffer[0],
+        DMA_RX_Configuration((rt_uint32_t)&codec->rx_data_list[codec->rx_rec_index].buffer[0],
                              RX_BUFF_SIZE/sizeof(rt_uint16_t));
-        codec.rx_rec_index++;
+        codec->rx_rec_index++;
 
-        if(codec.rx_rec_index == RX_BUFF_NUM)
+        if(codec->rx_rec_index == RX_BUFF_NUM)
         {
-            codec.rx_rec_index = 0;
+            codec->rx_rec_index = 0;
         }
         NVIC_EnableIRQ(AUDIO_I2S_RX_DMA_IRQ);
 		
         rt_sem_release(&sem);		
-        if(codec.rx_rec_index == codec.rx_read_index)
+        if(codec->rx_rec_index == codec->rx_read_index)
         {
             rt_kprintf("no rx buff!\r\n");
         }
