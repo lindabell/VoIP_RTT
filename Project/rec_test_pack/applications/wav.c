@@ -109,11 +109,13 @@ void wav(char* filename)
     fd = open(filename, O_RDONLY, 0);
     if (fd >= 0)
     {
-        rt_uint8_t* buf;
-        rt_size_t 	len;
+        rt_uint8_t* buf,*buf2;
+        rt_size_t 	len,i,j;
 		rt_device_t player;
         char riff_chunk[4];
 
+		buf2=rt_malloc(mempll_block_size/2);
+		
         /* wav format check */
         do
         {
@@ -154,11 +156,11 @@ void wav(char* filename)
                     read(fd, tmp, fmt_block.fmt_size - 16);
                 }
 
-                if(fmt_block.wav_format.Channels != 2)
-                {
-                    rt_kprintf("[err] only support stereo!\r\n");
-                    return;
-                }
+               // if(fmt_block.wav_format.Channels != 2)
+               // {
+               //     rt_kprintf("[err] only support stereo!\r\n");
+               //     return;
+               // }
             }
         }
         while(strncmp(riff_chunk, "data", 4) != 0);
@@ -232,8 +234,27 @@ void wav(char* filename)
         {
             //向mempoll申请空间,如果申请不成功则一直在此等待.
             buf = rt_mp_alloc(&_mp, RT_WAITING_FOREVER);
-            //从文件读取数据
-            len = read(fd, (char*)buf, mempll_block_size);
+			//如果是单声道时需要调数据，即把单声道变为立体声
+			if(fmt_block.wav_format.Channels != 2)
+			{
+				//从文件读取数据
+				len = read(fd, (char*)buf2, mempll_block_size/2);
+				for(i=0,j=0;i<len;)
+				{
+					buf[j++]=buf2[i];
+					buf[j++]=buf2[i+1];
+					buf[j++]=buf2[i];
+					buf[j++]=buf2[i+1];
+					i=i+2;
+				}
+				len*=2;
+			}
+			else
+			{
+				//从文件读取数据
+				len = read(fd, (char*)buf, mempll_block_size);
+			}
+			
             //读取成功就把数据写入设备
             if (len > 0)
             {
@@ -250,6 +271,8 @@ void wav(char* filename)
         /* close player and file */
         rt_device_close(player);
         close(fd);
+			
+		rt_free(buf2);
     }
 }
 FINSH_FUNCTION_EXPORT(wav, wav test. e.g: wav("/test.wav"))
