@@ -1,0 +1,167 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <SccProjectName>Perforce Project</SccProjectName>
+    <SccLocalPath>..\..</SccLocalPath>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.Cpp.UpgradeFromVC60.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.Cpp.UpgradeFromVC60.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>.\Release\</OutDir>
+    <IntDir>.\Release\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>.\Debug\</OutDir>
+    <IntDir>.\Debug\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <StringPooling>true</StringPooling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <Optimization>MaxSpeed</Optimization>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <AdditionalIncludeDirectories>../../include;../;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_LIB;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AssemblerListingLocation>.\Release\</AssemblerListingLocation>
+      <PrecompiledHeaderOutputFile>.\Release\libspeex.pch</PrecompiledHeaderOutputFile>
+      <ObjectFileName>.\Release\</ObjectFileName>
+      <ProgramDataBaseFileName>.\Release\</ProgramDataBaseFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <Culture>0x0809</Culture>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\Release\libspeex.bsc</OutputFile>
+    </Bscmake>
+    <Lib>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>..\..\lib\libspeex.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <Optimization>Disabled</Optimization>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <WarningLevel>Level3</WarningLevel>
+      <AdditionalIncludeDirectories>../../include;../;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_LIB;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AssemblerListingLocation>.\Debug\</AssemblerListingLocation>
+      <PrecompiledHeaderOutputFile>.\Debug\libspeex.pch</PrecompiledHeaderOutputFile>
+      <ObjectFileName>.\Debug\</ObjectFileName>
+      <ProgramDataBaseFileName>.\Debug\</ProgramDataBaseFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <Culture>0x0809</Culture>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\Debug\libspeex.bsc</OutputFile>
+    </Bscmake>
+    <Lib>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>..\..\lib\libspeex.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\libspeex\bits.c" />
+    <ClCompile Include="..\..\libspeex\cb_search.c" />
+    <ClCompile Include="..\..\libspeex\exc_10_16_table.c" />
+    <ClCompile Include="..\..\libspeex\exc_10_32_table.c" />
+    <ClCompile Include="..\..\libspeex\exc_20_32_table.c" />
+    <ClCompile Include="..\..\libspeex\exc_5_256_table.c" />
+    <ClCompile Include="..\..\libspeex\exc_5_64_table.c" />
+    <ClCompile Include="..\..\libspeex\exc_8_128_table.c" />
+    <ClCompile Include="..\..\libspeex\filters.c" />
+    <ClCompile Include="..\..\libspeex\gain_table.c" />
+    <ClCompile Include="..\..\libspeex\gain_table_lbr.c" />
+    <ClCompile Include="..\..\libspeex\hexc_10_32_table.c" />
+    <ClCompile Include="..\..\libspeex\hexc_table.c" />
+    <ClCompile Include="..\..\libspeex\high_lsp_tables.c" />
+    <ClCompile Include="..\..\libspeex\lpc.c" />
+    <ClCompile Include="..\..\libspeex\lsp.c" />
+    <ClCompile Include="..\..\libspeex\lsp_tables_nb.c" />
+    <ClCompile Include="..\..\libspeex\ltp.c" />
+    <ClCompile Include="..\..\libspeex\modes.c" />
+    <ClCompile Include="..\..\libspeex\modes_wb.c" />
+    <ClCompile Include="..\..\libspeex\nb_celp.c" />
+    <ClCompile Include="..\..\libspeex\quant_lsp.c" />
+    <ClCompile Include="..\..\libspeex\sb_celp.c" />
+    <ClCompile Include="..\..\libspeex\speex.c" />
+    <ClCompile Include="..\..\libspeex\speex_callbacks.c" />
+    <ClCompile Include="..\..\libspeex\speex_header.c" />
+    <ClCompile Include="..\..\libspeex\stereo.c" />
+    <ClCompile Include="..\..\libspeex\vbr.c" />
+    <ClCompile Include="..\..\libspeex\vq.c" />
+    <ClCompile Include="..\..\libspeex\window.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\libspeex\arch.h" />
+    <ClInclude Include="..\..\libspeex\cb_search.h" />
+    <ClInclude Include="..\..\libspeex\cb_search_sse.h" />
+    <ClInclude Include="..\..\libspeex\filters.h" />
+    <ClInclude Include="..\..\libspeex\filters_sse.h" />
+    <ClInclude Include="..\..\libspeex\fixed_debug.h" />
+    <ClInclude Include="..\..\libspeex\fixed_generic.h" />
+    <ClInclude Include="..\..\libspeex\lpc.h" />
+    <ClInclude Include="..\..\libspeex\lsp.h" />
+    <ClInclude Include="..\..\libspeex\ltp.h" />
+    <ClInclude Include="..\..\libspeex\ltp_sse.h" />
+    <ClInclude Include="..\..\libspeex\math_approx.h" />
+    <ClInclude Include="..\..\libspeex\modes.h" />
+    <ClInclude Include="..\..\libspeex\nb_celp.h" />
+    <ClInclude Include="..\..\libspeex\os_support.h" />
+    <ClInclude Include="..\..\libspeex\quant_lsp.h" />
+    <ClInclude Include="..\..\libspeex\sb_celp.h" />
+    <ClInclude Include="..\..\libspeex\stack_alloc.h" />
+    <ClInclude Include="..\..\libspeex\vbr.h" />
+    <ClInclude Include="..\..\libspeex\vq.h" />
+    <ClInclude Include="..\..\libspeex\vq_sse.h" />
+    <ClInclude Include="..\..\include\speex\speex.h" />
+    <ClInclude Include="..\..\include\speex\speex_bits.h" />
+    <ClInclude Include="..\..\include\speex\speex_callbacks.h" />
+    <ClInclude Include="..\..\include\speex\speex_header.h" />
+    <ClInclude Include="..\..\include\speex\speex_stereo.h" />
+    <ClInclude Include="..\..\include\speex\speex_types.h" />
+    <ClInclude Include="..\config.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
