@@ -47,7 +47,7 @@ struct FMT_BLOCK_DEF
 
 ALIGN(4)
 static uint8_t header_buffer[100];
-static rt_err_t wav_header_gen(int fd, rt_size_t size)
+static rt_err_t wav_header_gen(int fd,rt_uint32_t SamplesPerSec,rt_size_t size)
 {
     struct RIFF_HEADER_DEF * riff_header;
     struct FMT_BLOCK_DEF *   fmt_block;
@@ -69,7 +69,7 @@ static rt_err_t wav_header_gen(int fd, rt_size_t size)
     fmt_block->fmt_size = sizeof(struct WAVE_FORMAT_DEF);
     fmt_block->wav_format.FormatTag = 1;
     fmt_block->wav_format.Channels = 2;
-    fmt_block->wav_format.SamplesPerSec = 44100;
+    fmt_block->wav_format.SamplesPerSec =SamplesPerSec; //44100;
     fmt_block->wav_format.BlockAlign = 4;
     fmt_block->wav_format.BitsPerSample = 16;
     fmt_block->wav_format.AvgBytesPerSec = fmt_block->wav_format.SamplesPerSec
@@ -217,8 +217,7 @@ void wav(char* filename)
         /* set samplerate */
         {
             int SamplesPerSec = fmt_block.wav_format.SamplesPerSec;
-            if(rt_device_control(player, CODEC_CMD_SAMPLERATE, &SamplesPerSec)
-                    != RT_EOK)
+            if(rt_device_control(player, CODEC_CMD_SAMPLERATE, &SamplesPerSec) != RT_EOK)
             {
                 rt_kprintf("audio player doesn't support this sample rate: %d\r\n",
                            SamplesPerSec);
@@ -289,6 +288,8 @@ void wav_rec(void)
 	uint32_t count = 0;
 	int fd;
 	uint8_t *rx_buf;
+	rt_uint32_t SamplesPerSec;
+	
 	rx_buf=rt_malloc(RX_BUFF_SIZE);
 	RT_ASSERT(rx_buf!=0);
 	
@@ -308,6 +309,8 @@ void wav_rec(void)
 	}
 	
 	record->init(record);
+	SamplesPerSec=8000;	//8K²ÉÑùÂÊ
+	record->control(record, CODEC_CMD_SAMPLERATE, &SamplesPerSec);
 	record->open(record,RT_DEVICE_OFLAG_RDONLY);
 	rt_kprintf("REC start!\r\n");
 	while (1)
@@ -322,7 +325,7 @@ void wav_rec(void)
 		{
 			record->close(record);
 			/* add header */
-			wav_header_gen(fd, RX_BUFF_SIZE * count);
+			wav_header_gen(fd, SamplesPerSec,RX_BUFF_SIZE * count);
 			rt_kprintf("REC done, count: %u\r\n", count);
 
 			close(fd);
